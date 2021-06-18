@@ -1,0 +1,317 @@
+
+<!-- saved from url=(0034)https://www.xn1isevil.xyz/RPG.html -->
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+	<title>Quick RPG Fight</title>
+	<style>
+		.statBox {
+			margin: auto;
+			width: 10%;
+			border: 3px dotted black;
+			padding: 10px;
+		}
+		.headerText {
+			font-size: 1.5em;
+			text-align: center;
+		}
+		#logText {
+			font-size: 2.5em;
+			text-align: center;
+		}		
+		#restart {
+			font-size: 1.5em;
+		}
+		#controls {
+			margin: auto;
+			width: 50%;
+			padding: 10px;
+			display: grid;
+			grid-auto-flow: column;
+			grid-column-gap: 10px;
+		}
+		#spacerBox{
+			margin: auto;
+			width: 50%;
+			padding: 2px;
+		}	
+		#spacer{
+			text-align: center;
+		}
+		#attack, #wait {
+			font-size: 2em;
+		}
+	</style>
+
+</head>
+
+<body>
+	<div id="log">
+		<p id="logText">Push Play to start!</p>
+	</div>
+	<div class="statBox" id="enemy">
+		<p id="eName" class="headerText">Enemy</p>
+		<p id="eHP">HP:##########</p>
+		<p id="eArmor">Armor:100%</p>
+		<p id="ePower">Power: *</p>
+	</div>
+	<div id="spacerBox"><p id="spacer">-----~~~~===++#++===~~~~-----</p></div>
+	<div class="statBox" id="player">
+		<p id="pName" class="headerText">Player</p>
+		<p id="pHP">HP:##########</p>
+		<p id="pArmor">Armor:100%</p>
+		<p id="pPower">Power: *</p>
+	</div>
+	<div id="controls">
+		<button type="button" id="attack" onclick="clickAttack()" disabled="">Attack!</button>
+		<button type="button" id="wait" onclick="clickWait()" disabled="">Wait</button>
+	</div>
+	<hr>
+	<div id="flowControl">
+		<button type="button" id="restart" onclick="startGame()">Play!</button>
+	</div>
+	<div id="explanation">
+		<p>The Goal of the game is to defeat the goblin.
+		Attacking deals damage and decreases it's armor.
+		Waiting exponentially increases the power of your next attack.
+		The lower your armor is, the more damage you will take from enemy attacks.
+		Running out of armor resets your power meter to zero, but armor will reset back to full inmediately. 
+		You will lose if your HP reaches zero.
+		</p>
+		<p>
+		This game was made in the span of 8 hours during a particularly slow shift at work.
+		No further updates are planed XD.
+		</p>
+
+	</div>
+
+	<!-- ##################################################### -->
+	<!-- ##############FUNCTIONALITY BEGINS HERE############## -->
+	<!-- ##################################################### -->
+
+	<script>
+				//UI elements
+		//#####Buttons
+		var attackButton = document.getElementById("attack");
+		var waitButton = document.getElementById("wait");
+		var restartButton = document.getElementById("restart");
+		attackButton.disabled = true;
+		waitButton.disabled = true;
+			
+		//#####Action log
+		var log = document.getElementById("logText");
+		//######Stat displays
+		//PLAYER
+		var playerName = document.getElementById("pName");
+		var playerHp = document.getElementById("pHP");
+		var playerArmor = document.getElementById("pArmor");
+		var playerPower = document.getElementById("pPower");
+		//ENEMY
+		var enemyName = document.getElementById("eName");
+		var enemyHp = document.getElementById("eHP");
+		var enemyArmor = document.getElementById("eArmor");
+		var enemyPower = document.getElementById("ePower");
+
+		//Game Globals
+		var maxPower = 8;
+		var hpBarSize = 10;
+		var envDamageMin = 1;
+		var envDamageMax = 4;
+		var envDamageChance = 0.2;
+		var turn = 0;
+		var player;
+		var enemy;
+
+		//combatant class definition
+		//default values are balanced so that fights last 8 turns
+		function MakeCombatant(name, lvl = 1, maxHp = 50, maxArmor = 9, damageMin = 1, damageMax = 2, critChance = 0.2) {
+			var maxHp = maxHp * lvl;
+			var hp = maxHp;
+			var maxArmor = maxArmor * lvl;
+			var armor = maxArmor;
+			var damageMin = damageMin * lvl;
+			var damageMax = damageMax * lvl;
+			var power = 0;
+			return {
+				name: name,
+				lvl: lvl,
+				maxHp: maxHp,
+				hp: hp,
+				maxArmor: maxArmor,
+				armor: armor,
+				damageMin: damageMin,
+				damageMax: damageMax,
+				critChance: critChance,
+				power: power
+			};
+		}
+		
+		//Game flow logic
+		function initGame() {
+
+			//Pre-Game Set Up
+			player = MakeCombatant("Wizard");
+			enemy = MakeCombatant("Goblin");
+			restartButton.innerHTML = "Restart Game";
+			restartButton.disabled = true;
+			logText.innerHTML = "You have been ambushed by a " + enemy.name;
+			playerName.innerHTML = player.name;
+			enemyName.innerHTML = enemy.name;
+			updateStats();
+			setTimeout(function() { assignTurn(); }, 1500);	
+		}
+
+		//Game Loop
+		function assignTurn() {
+
+			if( turn % 2 == 0) {			//Even turns are human turns. 
+				if(player.power < 8) {
+					player.power += 1;
+				}
+				logText.innerHTML = "It's the " + player.name + "'s turn"
+				document.body.style.backgroundColor =  "#85c1e9";
+				updateStats();
+				attackButton.disabled = false;
+				waitButton.disabled = false;
+			}else {					//Odd turns are computer turns.
+				if(enemy.power < 8) {
+					enemy.power += 1;
+				}
+				logText.innerHTML = "It's the " + enemy.name + "'s turn"
+				document.body.style.backgroundColor = "#7dcea0";
+				updateStats();
+				attackButton.disabled = true;
+				waitButton.disabled = true;
+				setTimeout( enemyAi, 1500);
+			}
+		
+		}
+			
+		function gameEnd() {
+			if( player.hp <= 0) {
+				logText.innerHTML = "The " + player.name + " has perished in battle!"
+				attackButton.disabled = true;
+				waitButton.disabled = true;
+				restartButton.disabled = false;
+			}else if( enemy.hp <= 0) {
+				logText.innerHTML = "The " + player.name + " has vanquished his foe!"
+				attackButton.disabled = true;
+				waitButton.disabled = true;
+				restartButton.disabled = false;
+			}else{
+			assignTurn();
+			}
+		}
+		
+		//Game functions
+		function startGame() {
+			initGame();
+		}		
+		
+		function clickAttack() {
+			doDamage(player, enemy);
+			player.power = 0;
+			setTimeout( function() { updateStats(); }, 3000 );
+			setTimeout( function() { 
+						turn += 1; 
+						gameEnd(); }, 4000 );
+						}		
+		function clickWait() {
+			logText.innerHTML = "The " + player.name + " is powering up for an attack!"			
+			setTimeout( function() { 
+						turn += 1;
+						gameEnd(); }, 1500 );
+			console.log(turn);
+		}
+
+		function enemyAi() {
+			var confidence = 0.75;
+			var desperation = enemy.armor / enemy.maxArmor;
+			confidence = confidence * desperation;
+			if( Math.random() <= confidence){		//wait
+				logText.innerHTML = "The " + enemy.name + " is powering up for an attack!"			
+				setTimeout( function() { 
+							turn += 1;
+							gameEnd(); }, 1500 );
+			}else {						//attack
+				doDamage(enemy, player);
+				enemy.power = 0;
+				setTimeout( function() { updateStats(); }, 3000 );
+				setTimeout( function() { 
+							turn += 1;
+							gameEnd(); }, 4000 );		
+			}
+		}
+			
+		function doDamage(source, target) {
+			var intensity = Math.random();
+			var brokenArmor = false;
+			var crit = false;
+			var baseDamage = Math.floor(intensity * (source.damageMax - source.damageMin)) + source.damageMin;
+			var damage = (source.power ** 2);
+			damage = damage * baseDamage;
+			if(Math.random() <= source.critChance) {
+				crit = true;
+				damage = damage * 2;
+			}
+			target.armor -= damage;
+			var assignedDamage = damage * ( 1 - ( target.armor / target.maxArmor ) );
+			target.hp -= assignedDamage;
+	
+			if(target.armor <= 0 ){
+				target.armor = target.maxArmor;
+				target.power = 0;
+				brokenArmor = true;
+			}
+				
+			//Log messages
+			var attackMessage = "the " + source.name + " attacks the " + target.name;
+			var hitMessage = crit ? "got lucky, and " : "";
+			switch ( Math.floor( intensity * 2) ){
+				case 0:
+					hitMessage = hitMessage + "barely grazes the " + target.name;
+					break;
+				case 1:
+					hitMessage = hitMessage + "conects a punch with the " + target.name;
+					break;
+				case 2:
+					hitMessage = hitMessage + "hits the " + target.name + " square in the face";
+					break;
+			}
+			var damageMessage = target.name + " takes " + assignedDamage + " damage!";
+							
+			logText.innerHTML = attackMessage;
+			setTimeout( function() { logText.innerHTML = hitMessage; }, 1000 );
+			setTimeout( function() { logText.innerHTML = damageMessage; }, 2000 );
+			if( brokenArmor ) {
+				setTimeout( function() { logText.innerHTML = target.name + " was knocked down by the attack"; }, 3000);
+			}
+		}
+	
+		function updateStats() {
+			function percentBar(current, max, size = 10, symbol = "#") {
+				var barString = "";
+				var percent = Math.floor( size * ( current / max ) );
+				var i;
+				for(i = 0; i < percent; i++) {
+					barString = barString + symbol;
+				}
+				return barString;
+			}
+				
+			function percentCounter(current, max) {
+				var percentString = "";
+				var percent = Math.floor( 100 * (current / max) );
+				percentString = percentString + percent + "%";
+				return percentString;
+			}
+	
+			playerHp.innerHTML = "HP:" + percentBar(player.hp, player.maxHp, hpBarSize, "#");
+			playerArmor.innerHTML = "Armor: " + percentCounter(player.armor, player.maxArmor);
+			playerPower.innerHTML = "Power:" + percentBar(player.power, maxPower, maxPower, " *");
+			enemyHp.innerHTML = "HP:" + percentBar(enemy.hp, enemy.maxHp, hpBarSize, "#");
+			enemyArmor.innerHTML = "Armor: " + percentCounter(enemy.armor, enemy.maxArmor);
+			enemyPower.innerHTML = "Power:" + percentBar(enemy.power, maxPower, maxPower, " *");			
+		}
+	</script>
+
+
+</body></html>
